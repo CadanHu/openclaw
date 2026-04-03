@@ -11,7 +11,7 @@ async function restore() {
     return;
   }
 
-  // 1. 读取当前的索引（如果不存在则创建一个空的）
+  // 1. Load the current index (start with empty object if missing or corrupted)
   let index = {};
   if (fs.existsSync(INDEX_FILE)) {
     try {
@@ -21,25 +21,25 @@ async function restore() {
     }
   }
 
-  // 2. 扫描目录下的所有文件
+  // 2. Scan all files in the sessions directory
   const files = fs.readdirSync(SESSIONS_DIR);
   let restoredCount = 0;
 
   for (const file of files) {
     if (file.includes(".jsonl.reset.")) {
       const oldPath = path.join(SESSIONS_DIR, file);
-      // 提取原始 UUID (假设格式是 uuid.jsonl.reset.timestamp)
+      // Extract the original session ID (assumes format: uuid.jsonl.reset.timestamp)
       const sessionId = file.split(".")[0];
       const newPath = path.join(SESSIONS_DIR, `${sessionId}.jsonl`);
 
       console.log(`Restoring ${file} -> ${sessionId}.jsonl`);
 
-      // 3. 重命名文件
+      // 3. Rename the archived file back to its original name
       if (!fs.existsSync(newPath)) {
         fs.renameSync(oldPath, newPath);
       }
 
-      // 4. 构建索引条目（最简模式，系统启动后会自动补充细节）
+      // 4. Build a minimal index entry (gateway will fill in details on next startup)
       const sessionKey = `agent:main:restored:${sessionId}`;
       if (!index[sessionKey]) {
         index[sessionKey] = {
@@ -53,7 +53,7 @@ async function restore() {
     }
   }
 
-  // 5. 写回索引文件
+  // 5. Write the updated index back to disk
   fs.writeFileSync(INDEX_FILE, JSON.stringify(index, null, 2));
   console.log(`\n✅ Done! Restored ${restoredCount} sessions.`);
   console.log("Please restart your OpenClaw Gateway now.");
